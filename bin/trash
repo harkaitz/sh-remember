@@ -1,0 +1,17 @@
+#!/bin/sh -e
+##:
+#h: Usage: trash FILES... DIRS...
+#h:
+#h: Move files to ~/TRASH/YYYY-MM-DD.
+##:
+trash() {
+    local dir="${HOME:-${USERPROFILE}}/TRASH/`date +%Y-%m-%d`"
+    mkdir -p "${dir}"
+    mv -vi "$@" "${dir}"
+}
+if test @"`basename "$0"`" = @"trash";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            trash "$@"; exit 0;;
+    esac
+fi

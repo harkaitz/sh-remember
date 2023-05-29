@@ -1,0 +1,77 @@
+#!/bin/sh -e
+##:
+#h: Usage: note OPTS... | NOTE...
+#h:
+#h: Add a note to the notes file.
+#h:
+#h:     -v      : Show configuration.
+#h:     -e      : Edit with *${EDITOR:-vi}* or *${EDITOR_X:-xdg-open}*
+#h:     -l      : List notes.
+#h:     -d      : Delete last note.
+##:
+note() {
+    local OPTIND optopt op=''
+    ## Parse command line options.
+    while getopts "vled" optopt;do # OPTARG
+        case $optopt in
+            v)  note_show_variables; return 0;;
+            l)  op=note_print ;;
+            e)  op=note_edit  ;;
+            d)  op=note_del   ;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    ## Operations
+    if test -n "$1"; then
+        "${op:-note_save}" "$@"
+    else
+        "${op:-note_edit}" "$@"
+    fi
+}
+note_show_variables() {
+    cat <<-EOF
+	NOTE_FILE : ${NOTE_FILE}
+	EDITOR    : ${EDITOR:-vi}
+	EDITOR_X  : ${EDITOR_X:-xdg-open}
+	EOF
+}
+note_calc_variables() {
+    NOTE_FILE="${NOTE_FILE:-${HOME}/notes.txt}"
+    EDITOR="${EDITOR:-vi}"
+    case "`uname -o`" in
+        MS/Windows|Msys|*Cygwin*) EDITOR_X="${EDITOR_X:-notepad}"  ;;
+        *)                        EDITOR_X="${EDITOR_X:-xdg-open}" ;;
+    esac
+}
+## -------------------------------------------------------------------
+note_save() {
+    if test -n "$*"; then
+        local date="`date '+%Y-%m-%d %H:%m'`"
+        printf '%s - %s\n' "${date}" "$*" >> "${NOTE_FILE}"
+    fi
+}
+note_print() {
+    test ! -f "${NOTE_FILE}" || cat "${NOTE_FILE}"
+}
+note_edit() {
+    if test -t 0;then
+        ${EDITOR:-vi} "${NOTE_FILE}"
+    else
+        ${EDITOR_X:-xdg-open} "${NOTE_FILE}"
+    fi
+}
+note_del() {
+    if test -f "${NOTE_FILE}";then
+        sed -i'.tmp' '$d' "${NOTE_FILE}"
+        rm "${NOTE_FILE}.tmp"
+    fi
+}
+## -------------------------------------------------------------------
+note_calc_variables
+if test @"`basename "$0"`" = @"note";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)         note "$@"; exit 0;;
+    esac
+fi

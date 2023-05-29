@@ -1,0 +1,29 @@
+#!/bin/sh -e
+##:
+#h: Usage: changes
+#h:
+#h: Print the 10 most recently touched files. If the current directory
+#h: is a git repo, it will only consider commited files.
+##:
+changes() {
+    local file='' sec='' mod=''
+    changes_list_files | while read -r file
+    do
+        sec="`stat -c '%Y' "${file}"`"
+        mod="`date -d "@${sec}" "+%Y-%m-%d %H:%M"`"
+        printf '%s %s\n' "${mod}" "${file}"
+    done | sort | tail -n 10
+}
+changes_list_files() {
+    if test -e .git; then
+        git ls-tree --full-tree --name-only -r HEAD
+    else
+        find . -type f
+    fi | sed '\|/old/|d;\|/gen/|d'
+}
+if test @"$(basename "$0")" = @"changes";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)         changes "$@"; exit 0;;
+    esac
+fi

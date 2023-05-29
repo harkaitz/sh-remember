@@ -1,0 +1,50 @@
+#!/bin/sh -e
+##:
+#h: Usage: alog -r|p|d
+#h:
+#h: Record and play 30 second audiologs "alog.wav". This is usefull to
+#h: know where you left some work.
+##:
+alog() {
+    case "$1" in -*p*|'') alog_play      ;; esac
+    case "$1" in -*r*)    alog_record    ;; esac
+    case "$1" in -*d*)    rm -f alog.wav ;; esac
+    case "$1" in -*)      shift          ;; esac
+}
+alog_record() {
+    local tmp="/tmp/alog-`whoami`.wav" op=''
+    echo "Recording... type 'q' when finished."
+    if ! ffmpeg -y -loglevel error -f alsa -i hw:0 -t 30 "${tmp}"; then
+        rm -f "${tmp}"
+    fi
+    mv -vi "${tmp}" alog.wav
+}
+alog_play() {
+    if test -e alog.wav; then
+        aplay alog.wav
+    else
+        echo >&2 "error: alog.wav: File not found."
+        return 1
+    fi
+}
+alog_check_programs() {
+    if ! which ffmpeg >/dev/null 2>&1; then
+        echo >&2 "error: Please install ffmpeg."
+        return 1
+    fi
+    if ! which aplay >/dev/null 2>&1; then
+        echo >&2 "error: Please install aplay."
+        return 1
+    fi
+    if test ! @"`uname -o`" = @"GNU/Linux"; then
+        echo >&2 "error: Please run this in GNU/Linux."
+        return 1
+    fi
+}
+## -------------------------------------------------------------------
+if test @"`basename "$0"`" = @"alog";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)         alog "$@"; exit 0;;
+    esac
+fi

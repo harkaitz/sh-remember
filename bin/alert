@@ -1,0 +1,59 @@
+#!/bin/sh -e
+##:
+#h: Usage: alert -i RCFILE | -e | MESSAGE
+#h:
+#h: Write an alert to ~/ALERTS.md FILE. The contents of this file will
+#h: be printed on each new shell every 2H.
+##:
+alert() {
+    ## Parse command line arguments.
+    local OPTIND optopt opt_e='' opt_i=''
+    while getopts "ei:" optopt; do
+        case $optopt in
+            e)  opt_e=y;;
+            i)  opt_i="${OPTARG}";;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    ## Install to RC file.
+    if test -n "${opt_i}" && test -e "${opt_i}"; then
+        sed -i '/--ALERT--/,/--ALERT--/d' "${opt_i}"
+        cat >> "${opt_i}" <<-EOF
+	## --ALERT--
+	if test -e ~/ALERTS.md; then
+	    last_alert="\$(test -e ~/.last_alert && cat ~/.last_alert || echo 0)"
+	    time_alert="\$(date +%s)"
+	    diff_alert="\$(( \$time_alert - \$last_alert ))"
+	    if test \$diff_alert -gt 3600; then
+	        echo == ALERTS =======================================
+	        cat ~/ALERTS.md
+	        echo =================================================
+	    fi
+	    echo "\${time_alert}" > ~/.last_alert
+	fi
+	## --ALERT--
+	EOF
+        return 0
+    elif test -n "${opt_i}"; then
+        echo >&2 "error: ${opt_i}: The file does not exist."
+        return 1
+    fi
+    ## Operations.
+    if test -n "${opt_e}"; then
+        ${EDITOR:-vi} ~/ALERTS.md
+    elif test -n "$1"; then
+        echo "$*" >> ~/ALERTS.md
+    elif test -e ~/ALERTS.md; then
+        cat ~/ALERTS.md
+    else
+        echo >&2 "error: TODO.md: File does not exist."
+        return 1
+    fi
+}
+if test @"`basename "$0"`" = @"alert";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            alert "$@"; exit 0;;
+    esac
+fi

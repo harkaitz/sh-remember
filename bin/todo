@@ -1,0 +1,38 @@
+#!/bin/sh -e
+##:
+#h: Usage: todo -e | MESSAGE
+#h:
+#h: Edit the TODO.md FILE in the working directory.
+##:
+todo() {
+    ## Parse command line arguments.
+    local OPTIND optopt opt_e=''
+    while getopts "e" optopt; do
+        case $optopt in
+            e)  opt_e=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    ## Operations.
+    if test -n "${opt_e}"; then
+        ${EDITOR:-vi} TODO.md
+    elif test -n "$1"; then
+        if test ! -e TODO.md; then
+            echo >&2 "error: TODO.md: File does not exist."
+        else
+            echo "$*" >> TODO.md
+        fi
+    elif test -e TODO.md; then
+        cat TODO.md
+    else
+        echo >&2 "error: TODO.md: File does not exist."
+        return 1
+    fi
+}
+if test @"`basename "$0"`" = @"todo";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)         todo "$@"; exit 0;;
+    esac
+fi
